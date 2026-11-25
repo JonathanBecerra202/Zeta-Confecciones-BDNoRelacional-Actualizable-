@@ -1,28 +1,25 @@
 import 'dart:typed_data';
 
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../core/api_client.dart';
 
-/// Fotos de perfil en el bucket PRIVADO `avatars`.
-///
-/// - Cada usuario tiene un único archivo fijo: `{user_id}/avatar`. Cambiar la
-///   foto lo sobrescribe, así que nunca quedan archivos duplicados ni huérfanos.
-/// - En `z_conf.profile` solo se guarda la ruta (`avatar_path`), no la imagen.
-/// - Para mostrarla se piden URLs firmadas que caducan.
-/// - Los permisos reales (solo administradores suben, cambian o borran) los
-///   aplican las políticas de Storage y un trigger en la base de datos.
+/// Fotos de perfil almacenadas en el backend (`static/avatars`).
 class AvatarService {
-  final SupabaseClient _db;
-  AvatarService(this._db);
+  final ApiClient _api;
+  AvatarService(this._api);
 
-  static const bucket = 'avatars';
-  static const maxBytes = 2 * 1024 * 1024; // igual que el límite del bucket
-  static const _urlLifetime = 3600; // segundos
+  static const maxBytes = 2 * 1024 * 1024;
 
   static const _mimeByExtension = {
     'jpg': 'image/jpeg',
     'jpeg': 'image/jpeg',
     'png': 'image/png',
     'webp': 'image/webp',
+  };
+
+  static const _extByMime = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
   };
 
   /// Tipo de imagen admitido a partir del mime o del nombre del archivo;
@@ -35,37 +32,29 @@ class AvatarService {
     return _mimeByExtension[fileName.substring(dot + 1).toLowerCase()];
   }
 
-  static String pathFor(String userId) => '$userId/avatar';
-
-  /// Sube (o reemplaza) la foto y guarda la ruta en el perfil.
+  /// Sube (o reemplaza) la foto y devuelve la ruta guardada en el perfil.
   Future<String> upload(String userId, Uint8List bytes, String contentType) async {
     if (bytes.length > maxBytes) {
       throw Exception('La imagen supera los 2 MB.');
     }
-    final path = pathFor(userId);
-    await _db.storage.from(bucket).uploadBinary(
-          path,
-          bytes,
-          fileOptions: FileOptions(contentType: contentType, upsert: true),
-        );
-    await _db.from('profile').update({'avatar_path': path}).eq('user_id', userId);
-    return path;
+    final ext = _extByMime[contentType] ?? 'jpg';
+    final res = await _api.uploadFile(
+      '/users/$userId/avatar',
+      bytes: bytes,
+      contentType: contentType,
+      filename: 'avatar.$ext',
+    ) as Map<String, dynamic>;
+    return res['avatar_path'] as String;
   }
 
   /// Borra el archivo y deja el perfil sin foto.
   Future<void> remove(String userId) async {
-    await _db.storage.from(bucket).remove([pathFor(userId)]);
-    await _db.from('profile').update({'avatar_path': null}).eq('user_id', userId);
+    await _api.delete('/users/$userId/avatar');
   }
 
-  /// URLs firmadas (ruta -> url) en una sola llamada. Las rutas que no se
-  /// puedan firmar (archivo ausente o sin permiso) se omiten sin fallar.
+  /// Resuelve rutas relativas `/static/avatars/...` a URLs completas del backend.
   Future<Map<String, String>> signedUrls(List<String> paths) async {
     if (paths.isEmpty) return const {};
-    final res = await _db.storage.from(bucket).createSignedUrls(paths, _urlLifetime);
-    return {
-      for (final r in res)
-        if (r.signedUrl.isNotEmpty) r.path: r.signedUrl,
-    };
+    return {for (final p in paths) p: _api.resolveUrl(p)};
   }
 }

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../bloc/providers.dart';
 import '../../core/format.dart';
@@ -70,13 +69,6 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
       }
     } on WrongCurrentPasswordException {
       if (mounted) setState(() => _error = 'La contraseña actual no es correcta.');
-    } on AuthException catch (e) {
-      final m = e.message.toLowerCase();
-      if (mounted) {
-        setState(() => _error = m.contains('different from the old')
-            ? 'La nueva contraseña debe ser distinta de la actual.'
-            : friendlyError(e));
-      }
     } catch (e) {
       if (mounted) setState(() => _error = friendlyError(e));
     } finally {

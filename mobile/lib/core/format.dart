@@ -1,7 +1,7 @@
 import 'package:flutter/services.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/models.dart';
+import 'api_client.dart';
 
 /// $1.234.567
 String money(num v) {
@@ -135,43 +135,23 @@ String dueLabel(GarmentOrder o) {
   return '${_daysShort[d.weekday - 1]}, ${d.day} ${_monthsShort[d.month - 1]}';
 }
 
-/// Traduce errores de Supabase/Postgres a mensajes entendibles.
+/// Traduce errores de la API/red a mensajes entendibles.
 String friendlyError(Object e) {
-  if (e is AuthException) {
-    final m = e.message.toLowerCase();
-    if (m.contains('invalid login')) return 'Correo o contraseña incorrectos.';
+  if (e is ApiException) {
     return e.message;
   }
-  var msg = e is PostgrestException ? e.message : e.toString();
+  var msg = e.toString();
   final lower = msg.toLowerCase();
-  if (e is PostgrestException && (e.code == 'PGRST106' || lower.contains('invalid schema'))) {
-    return 'El schema z_conf no está expuesto en Supabase. Actívalo en '
-        'Project Settings → Data API → Exposed schemas y guarda.';
-  }
-  if (e is PostgrestException && e.code == '42501' && lower.contains('schema')) {
-    return 'Falta el permiso sobre el schema z_conf. Ejecuta de nuevo los GRANT del script de RLS '
-        '(GRANT USAGE ON SCHEMA z_conf TO authenticated ...).';
-  }
-  if (e is PostgrestException && (e.code == 'PGRST116' || lower.contains('no rows'))) {
-    return 'No se encontró tu perfil. Verifica que tu usuario tenga una fila en z_conf.profile.';
-  }
-  if (lower.contains('email not confirmed')) {
-    return 'El correo aún no está confirmado en Supabase (Authentication → Users).';
-  }
   if (lower.contains('chk_delivery_date_not_past')) {
     return 'La fecha de entrega no puede ser anterior a hoy.';
   }
-  if (lower.contains('client_phone_key') || lower.contains('duplicate key')) {
+  if (lower.contains('duplicate key')) {
     return 'Ya existe un registro con ese dato (por ejemplo, el mismo teléfono o nombre).';
   }
-  if (lower.contains('row-level security') || lower.contains('permission denied')) {
-    return 'No tienes permiso para realizar esta acción.';
-  }
-  if (lower.contains('foreign key')) {
-    return 'No se puede eliminar porque tiene información relacionada.';
-  }
-  if (lower.contains('socketexception') || lower.contains('failed host lookup')) {
-    return 'Sin conexión. Revisa tu internet e inténtalo de nuevo.';
+  if (lower.contains('socketexception') ||
+      lower.contains('failed host lookup') ||
+      lower.contains('clientexception')) {
+    return 'Sin conexión con el servidor. Revisa tu red e inténtalo de nuevo.';
   }
   msg = msg.replaceFirst('Exception: ', '');
   return msg;

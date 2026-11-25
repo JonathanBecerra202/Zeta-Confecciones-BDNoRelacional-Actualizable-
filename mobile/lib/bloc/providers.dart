@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../core/api_client.dart';
 import '../core/format.dart';
 import '../models/managed_user.dart';
 import '../models/models.dart';
@@ -9,27 +9,26 @@ import '../services/auth_service.dart';
 import '../services/avatar_service.dart';
 import '../services/user_admin_service.dart';
 
-final supabaseProvider = Provider<SupabaseClient>((ref) => Supabase.instance.client);
+final apiClientProvider = Provider<ApiClient>((ref) => ApiClient.instance);
 
-final repoProvider = Provider<Repo>((ref) => Repo(ref.watch(supabaseProvider)));
+final repoProvider = Provider<Repo>((ref) => Repo(ref.watch(apiClientProvider)));
 
-final authServiceProvider = Provider<AuthService>((ref) => AuthService(ref.watch(supabaseProvider)));
+final authServiceProvider =
+    Provider<AuthService>((ref) => AuthService(ref.watch(apiClientProvider)));
 
 /// true mientras la cuenta tenga una contraseña temporal pendiente de cambiar.
-/// Se deduce de la sesión de Supabase (app_metadata), no de un valor local.
 final mustChangePasswordProvider = StreamProvider.autoDispose<bool>((ref) {
   ref.watch(userIdProvider);
   return ref.watch(authServiceProvider).watchMustChangePassword();
 });
 
 final userAdminServiceProvider =
-    Provider<UserAdminService>((ref) => UserAdminService(ref.watch(supabaseProvider)));
+    Provider<UserAdminService>((ref) => UserAdminService(ref.watch(apiClientProvider)));
 
 final avatarServiceProvider =
-    Provider<AvatarService>((ref) => AvatarService(ref.watch(supabaseProvider)));
+    Provider<AvatarService>((ref) => AvatarService(ref.watch(apiClientProvider)));
 
 /// Consulta de la lista de usuarios: página + búsqueda + filtros.
-/// Tiene == para que Riverpod reutilice el resultado cuando no cambia nada.
 class UsersQuery {
   final int page;
   final int pageSize;
@@ -57,8 +56,6 @@ class UsersQuery {
   int get hashCode => Object.hash(page, pageSize, search, role, includeInactive);
 }
 
-/// Una página de usuarios con correo, rol y estado (solo Admin; la verificación
-/// ocurre en la función SQL `z_conf.admin_list_users`).
 final managedUsersProvider =
     FutureProvider.autoDispose.family<ManagedUsersPage, UsersQuery>((ref, q) async {
   ref.watch(userIdProvider);
@@ -71,8 +68,6 @@ final managedUsersProvider =
     page: q.page,
     pageSize: q.pageSize,
   );
-  // Fotos: una sola llamada para firmar las URLs de toda la página. Si falla,
-  // la lista se muestra igual, con iniciales en lugar de foto.
   final paths = [for (final u in page.users) if (u.avatarPath != null) u.avatarPath!];
   var urls = const <String, String>{};
   try {
@@ -84,8 +79,6 @@ final managedUsersProvider =
   );
 });
 
-/// URL firmada de la foto del usuario con sesión (tarjeta de «Más»).
-/// Si la foto cambia sin cambiar la ruta, hay que invalidar este provider.
 final myAvatarUrlProvider = FutureProvider.autoDispose<String?>((ref) async {
   final path = ref.watch(profileProvider.select((p) => p.valueOrNull?.avatarPath));
   if (path == null) return null;
@@ -93,12 +86,13 @@ final myAvatarUrlProvider = FutureProvider.autoDispose<String?>((ref) async {
   return urls[path];
 });
 
-/// Emite el id del usuario con sesión (o null). Solo cambia al entrar/salir.
+/// Emite el id del usuario con sesión (o null). Cambia al iniciar/cerrar sesión.
 final authStateProvider = StreamProvider<String?>((ref) async* {
-  final auth = ref.watch(supabaseProvider).auth;
-  yield auth.currentSession?.user.id;
-  await for (final state in auth.onAuthStateChange) {
-    yield state.session?.user.id;
+  final api = ref.watch(apiClientProvider);
+  final auth = ref.watch(authServiceProvider);
+  yield await auth.restoreSession();
+  await for (final _ in api.onTokenChange) {
+    yield await auth.restoreSession();
   }
 });
 
@@ -145,8 +139,6 @@ final userNamesProvider = FutureProvider.autoDispose<List<UserName>>((ref) {
   return ref.watch(repoProvider).userNames();
 });
 
-/// Consulta de auditoría: página + filtros. Tiene == para que Riverpod
-/// reutilice el resultado cuando no cambia nada.
 class AuditQuery {
   final int page;
   final String? operation;
@@ -170,11 +162,8 @@ final auditPageProvider =
   List<String>? ids;
   var includeSystem = false;
   final text = q.userQuery.trim();
-  // Se obtiene antes de cualquier await (buena práctica con ref.watch).
   final usersFuture = text.isEmpty ? null : ref.watch(userNamesProvider.future);
   if (usersFuture != null) {
-    // La auditoría solo guarda el id del usuario: se busca por nombre en
-    // profile.full_name y se filtra por esos ids. "Sistema / SQL" = sin usuario.
     final users = await usersFuture;
     ids = users.where((u) => matchesSearch(u.fullName, text)).map((u) => u.id).toList();
     includeSystem = matchesSearch('Sistema SQL', text);
@@ -187,7 +176,6 @@ final auditPageProvider =
   );
 });
 
-/// Mapa id -> cliente para mostrar nombres en las listas de pedidos.
 final clientMapProvider = Provider.autoDispose<Map<int, Client>>((ref) {
   final list = ref.watch(clientsProvider).valueOrNull ?? const <Client>[];
   return {for (final c in list) c.id: c};

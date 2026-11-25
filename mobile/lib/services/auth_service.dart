@@ -1,4 +1,6 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:async';
+
+import '../core/api_client.dart';
 
 /// La contraseña actual escrita no coincide con la de la cuenta.
 class WrongCurrentPasswordException implements Exception {
@@ -7,82 +9,102 @@ class WrongCurrentPasswordException implements Exception {
   String toString() => 'La contraseña actual no es correcta.';
 }
 
-/// Autenticación con Supabase Auth: inicio y cierre de sesión y cambio de
-/// contraseña. Las pantallas no llaman a `supabase.auth` directamente.
+/// Autenticación contra la API FastAPI (JWT + bcrypt).
 class AuthService {
-  final SupabaseClient _db;
-  AuthService(this._db);
+  final ApiClient _api;
+  AuthService(this._api);
 
-  User? get currentUser => _db.auth.currentUser;
-  String? get currentEmail => currentUser?.email;
+  String? _userId;
+  String? _email;
+  bool _mustChangePassword = false;
+  final _mustChangeController = StreamController<bool>.broadcast();
 
-  /// true si el administrador dejó una contraseña temporal que el usuario
-  /// todavía debe reemplazar.
-  ///
-  /// La marca vive en `app_metadata` de la cuenta de Supabase Auth: se guarda
-  /// en el servidor, viaja en la sesión y el usuario NO puede modificarla desde
-  /// la app (solo la Edge Function con la clave de servicio). Por eso persiste
-  /// aunque se cierre la app o se vuelva a iniciar sesión.
-  bool get mustChangePassword => currentUser?.appMetadata['must_change_password'] == true;
+  String? get currentUserId => _userId;
+  String? get currentEmail => _email;
+  bool get mustChangePassword => _mustChangePassword;
 
-  /// Emite el valor actual y se actualiza con cada cambio de sesión.
   Stream<bool> watchMustChangePassword() async* {
-    yield mustChangePassword;
-    await for (final _ in _db.auth.onAuthStateChange) {
-      yield mustChangePassword;
+    yield _mustChangePassword;
+    yield* _mustChangeController.stream;
+  }
+
+  /// Restaura sesión si hay un JWT guardado; devuelve `user_id` o `null`.
+  Future<String?> restoreSession() async {
+    if (_api.token == null || _api.token!.isEmpty) {
+      _clearLocal();
+      return null;
+    }
+    try {
+      final data = await _api.get('/auth/me') as Map<String, dynamic>;
+      _applyUser(data);
+      return _userId;
+    } on ApiException catch (e) {
+      if (e.statusCode == 401 || e.statusCode == 403) {
+        await _api.setToken(null);
+        _clearLocal();
+        return null;
+      }
+      rethrow;
     }
   }
 
   Future<void> signIn({required String email, required String password}) async {
-    await _db.auth.signInWithPassword(email: email, password: password);
+    final data = await _api.post(
+      '/auth/login',
+      body: {'email': email.trim(), 'password': password},
+    ) as Map<String, dynamic>;
+
+    final user = data['user'] as Map<String, dynamic>;
+    _applyUser(user);
+    await _api.setToken(data['access_token'] as String);
   }
 
-  Future<void> signOut() => _db.auth.signOut();
+  Future<void> signOut() async {
+    _clearLocal();
+    await _api.setToken(null);
+  }
 
-  /// Cambio voluntario (Más → Cambiar contraseña). Comprueba primero la
-  /// contraseña actual.
-  Future<void> changePassword({required String currentPassword, required String newPassword}) async {
-    final email = currentEmail;
-    if (email == null) throw Exception('No hay sesión activa.');
+  /// Cambio voluntario (Más → Cambiar contraseña).
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
     try {
-      await _db.auth.signInWithPassword(email: email, password: currentPassword);
-    } on AuthException {
-      throw const WrongCurrentPasswordException();
+      await _api.post(
+        '/auth/change-password',
+        body: {'current_password': currentPassword, 'new_password': newPassword},
+      );
+      _mustChangePassword = false;
+      _mustChangeController.add(false);
+    } on ApiException catch (e) {
+      if (e.statusCode == 400) {
+        throw const WrongCurrentPasswordException();
+      }
+      rethrow;
     }
-    await _db.auth.updateUser(UserAttributes(password: newPassword));
   }
 
   /// Cambio obligatorio tras recibir una contraseña temporal.
-  /// Lo hace la Edge Function: cambia la contraseña y borra la marca en el
-  /// servidor en un solo paso (el usuario no puede borrar la marca por su cuenta).
   Future<void> completeTemporaryPasswordChange(String newPassword) async {
-    final email = currentEmail;
-    if (email == null) throw Exception('No hay sesión activa.');
-    try {
-      final res = await _db.functions.invoke(
-        'admin-users',
-        body: {'action': 'change_own_password', 'password': newPassword},
-      );
-      final data = res.data;
-      if (data is Map && data['error'] != null) throw Exception(data['error'].toString());
-    } on FunctionException catch (e) {
-      final d = e.details;
-      if (d is Map && d['error'] != null) throw Exception(d['error'].toString());
-      if (e.status == 404) {
-        throw Exception('La función admin-users aún no está desplegada en Supabase.');
-      }
-      throw Exception('Error del servidor (${e.status}).');
-    }
+    await _api.post(
+      '/auth/change-password',
+      body: {'new_password': newPassword},
+    );
+    _mustChangePassword = false;
+    _mustChangeController.add(false);
+  }
 
-    // Renueva la sesión para que traiga la marca ya borrada. Si el servidor
-    // invalidó el token anterior, se vuelve a entrar con la contraseña nueva.
-    try {
-      await _db.auth.refreshSession();
-    } on AuthException {
-      await _db.auth.signInWithPassword(email: email, password: newPassword);
-    }
-    if (mustChangePassword) {
-      await _db.auth.signInWithPassword(email: email, password: newPassword);
-    }
+  void _applyUser(Map<String, dynamic> user) {
+    _userId = user['user_id'] as String;
+    _email = user['email'] as String?;
+    _mustChangePassword = (user['must_change_password'] as bool?) ?? false;
+    _mustChangeController.add(_mustChangePassword);
+  }
+
+  void _clearLocal() {
+    _userId = null;
+    _email = null;
+    _mustChangePassword = false;
+    _mustChangeController.add(false);
   }
 }
