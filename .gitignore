@@ -1,0 +1,15 @@
+@"
+# Python / Backend
+venv/
+__pycache__/
+*.pyc
+.env
+
+# Flutter / Mobile
+**/build/
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+**/pubspec.lock
+"@ | Out-File -Encoding utf8 .gitignore

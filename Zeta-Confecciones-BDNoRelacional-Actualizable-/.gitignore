@@ -1,0 +1,25 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml
+.idea/
+.vscode/
+
+# Claves del proyecto (no subir a Git)
+env.json
+
+
+# Archivos temporales y registros
+*.log
+android/.kotlin/
+.dart_tool/
+
+# Configuraciones locales
+.env
+.env.*
+!.env.example
