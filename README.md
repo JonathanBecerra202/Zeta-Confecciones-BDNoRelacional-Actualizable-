@@ -152,8 +152,8 @@ flutter run --dart-define=API_BASE_URL=http://localhost:8000
 Si en algún momento necesitas reiniciar MongoDB Atlas:
 
 1. Limpia las colecciones existentes en `mongosh`.
-2. Ejecuta los bloques de `db.createCollection(...)` y `createIndex(...)` de `Z-Confecciones_MongoDB.txt`.
-3. Ejecuta `Insert.txt` para cargar los datos iniciales (`role`, `organization`, `department`, `client`, `measurement`, `garment_order`, `payment`).
+2. Ejecuta los bloques de `db.createCollection(...)` y `createIndex(...)` de `database/01_schema_and_indexes.txt`.
+3. Ejecuta `database/02_seed_data.js` para cargar los datos iniciales (`role`, `organization`, `department`, `client`, `measurement`, `garment_order`, `payment`).
 4. Inicia el backend (recrea automáticamente la colección `counters` y el índice único de `profile.email`) y vuelve a correr `.\venv\Scripts\python.exe seed_admin.py`.
 
 ---
