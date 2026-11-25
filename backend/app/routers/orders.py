@@ -126,7 +126,7 @@ def create_order(
     user: CurrentUser = Depends(get_current_user),
     db: Database = Depends(get_db),
 ) -> GarmentOrderOut:
-    if not db.client.find_one({"client_id": body.client_id}, {"_id": 1}):
+    if not db["client"].find_one({"client_id": body.client_id}, {"_id": 1}):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cliente no encontrado.")
 
     if body.measurement_id is not None:

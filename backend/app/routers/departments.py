@@ -95,7 +95,7 @@ def delete_department(
             status_code=status.HTTP_404_NOT_FOUND, detail="Dependencia no encontrada."
         )
 
-    if db.client.find_one({"department_id": department_id}, {"_id": 1}):
+    if db["client"].find_one({"department_id": department_id}, {"_id": 1}):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="No se puede eliminar la dependencia porque tiene clientes asociados.",

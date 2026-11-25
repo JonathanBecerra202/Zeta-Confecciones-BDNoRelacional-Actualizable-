@@ -15,7 +15,7 @@ def list_clients(
     _: CurrentUser = Depends(get_current_user),
     db: Database = Depends(get_db),
 ) -> list[ClientOut]:
-    docs = db.client.find({}, {"_id": 0}).sort("first_name", 1)
+    docs = db["client"].find({}, {"_id": 0}).sort("first_name", 1)
     return [ClientOut(**doc) for doc in docs]
 
 
@@ -45,7 +45,7 @@ def create_client(
         "updated_at": now,
         "department_id": int(body.department_id) if body.department_id is not None else None,
     }
-    db.client.insert_one(doc)
+    db["client"].insert_one(doc)
     write_audit_log(
         db,
         table_name="client",
@@ -66,7 +66,7 @@ def update_client(
     user: CurrentUser = Depends(get_current_user),
     db: Database = Depends(get_db),
 ) -> ClientOut:
-    existing = db.client.find_one({"client_id": client_id}, {"_id": 0})
+    existing = db["client"].find_one({"client_id": client_id}, {"_id": 0})
     if not existing:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cliente no encontrado.")
 
@@ -80,8 +80,8 @@ def update_client(
 
     if updates:
         updates["updated_at"] = datetime.now(timezone.utc)
-        db.client.update_one({"client_id": client_id}, {"$set": updates})
-        updated = db.client.find_one({"client_id": client_id}, {"_id": 0})
+        db["client"].update_one({"client_id": client_id}, {"$set": updates})
+        updated = db["client"].find_one({"client_id": client_id}, {"_id": 0})
         write_audit_log(
             db,
             table_name="client",
@@ -105,7 +105,7 @@ def list_measurements(
     _: CurrentUser = Depends(get_current_user),
     db: Database = Depends(get_db),
 ) -> list[MeasurementOut]:
-    if not db.client.find_one({"client_id": client_id}, {"_id": 1}):
+    if not db["client"].find_one({"client_id": client_id}, {"_id": 1}):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cliente no encontrado.")
 
     docs = db.measurement.find({"client_id": client_id}, {"_id": 0}).sort("taken_at", -1)
@@ -123,7 +123,7 @@ def create_measurement(
     user: CurrentUser = Depends(get_current_user),
     db: Database = Depends(get_db),
 ) -> MeasurementOut:
-    if not db.client.find_one({"client_id": client_id}, {"_id": 1}):
+    if not db["client"].find_one({"client_id": client_id}, {"_id": 1}):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cliente no encontrado.")
 
     measurement_id = get_next_sequence(db, "measurement")
