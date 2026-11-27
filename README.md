@@ -78,6 +78,6 @@ Luego apunta Flutter a tu servidor local usando `--dart-define`:
 Si en algún momento necesitas reiniciar MongoDB Atlas:
 
 1. Limpia las colecciones existentes en `mongosh`.
-2. Ejecuta los bloques de `db.createCollection(...)` y `createIndex(...)` de `database/01_schema_and_indexes.txt`.
+2. Ejecuta `database/01_schema_and_indexes.js` en `mongosh` (`load("database/01_schema_and_indexes.js")`).
 3. Ejecuta `database/02_seed_data.js` para cargar los datos iniciales (`role`, `organization`, `department`, `client`, `measurement`, `garment_order`, `payment`).
 4. Al iniciar el backend, se recrean automáticamente `counters` y el índice único de `profile.email`; luego ejecuta `.\venv\Scripts\python.exe seed_admin.py` para crear de nuevo el Admin inicial.

@@ -5,7 +5,7 @@ Guía para limpiar la base de datos en MongoDB Atlas y volver a crear las colecc
 ## Archivos en esta carpeta
 
 1. [`00_reset_database.js`](./00_reset_database.js): elimina todas las colecciones existentes (`drop()`).
-2. [`01_schema_and_indexes.txt`](./01_schema_and_indexes.txt): crea las 9 colecciones con sus validaciones `$jsonSchema` (`validationLevel: "strict"`) y sus índices únicos.
+2. [`01_schema_and_indexes.js`](./01_schema_and_indexes.js): crea las 9 colecciones con sus validaciones `$jsonSchema` (`validationLevel: "strict"`) y sus índices únicos.
 3. [`02_seed_data.js`](./02_seed_data.js): inserta los datos iniciales (`role`, `organization`, `department`, `client`, `measurement`, `garment_order` y `payment`).
 
 ---
@@ -26,7 +26,11 @@ load("database/00_reset_database.js")
 ```
 
 ### Paso 2: Crear colecciones, validaciones e índices
-Abre `01_schema_and_indexes.txt` y ejecuta en `mongosh` los bloques `db.createCollection(...)` y `db.<coleccion>.createIndex(...)` de la sección **2. CREACIÓN DE COLECCIONES CON VALIDACIÓN** (en el orden en que aparecen: primero `role`, `organization`, `department`, `client`, luego `measurement`, `garment_order`, `payment`, `profile` y `audit_log`).
+Ejecuta `01_schema_and_indexes.js`:
+
+```javascript
+load("database/01_schema_and_indexes.js")
+```
 
 ### Paso 3: Insertar datos iniciales
 Ejecuta `02_seed_data.js`:

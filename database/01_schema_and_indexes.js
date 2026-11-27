@@ -1,3 +1,4 @@
+/*
 ----------------Transformacion de SQL a NoSQL: Z_CONFECCIONES - Colecciones con Validaciones
 
 -->Herramientas: MongoDB Compass / Shell (mongosh)
@@ -36,7 +37,9 @@
 -----------1. CREACION DE BASE DE DATOS
 ---------------------------------------------------------------------------
 
-use Z-Confecciones
+*/
+db = db.getSiblingDB("Z-Confecciones");
+/*
 
 
 ---------------------------------------------------------------------------
@@ -56,6 +59,7 @@ CREATE TABLE z_conf.role (
 --> creación con validación de esquema en MongoDB: JavaScript
 
 
+*/
 db.createCollection("role", {
    validator: {
       $jsonSchema: {
@@ -84,6 +88,7 @@ db.createCollection("role", {
 
 db.role.createIndex({ role_id: 1 }, { unique: true });   // PRIMARY KEY
 db.role.createIndex({ name: 1 }, { unique: true });      // UNIQUE
+/*
 
 
 ----------------------------------------------------------------ORGANIZATION
@@ -101,6 +106,7 @@ CHECK (length(trim(name)) > 0);
 ---- Con validaciones:
 
 
+*/
 db.createCollection("organization", {
    validator: {
       $jsonSchema: {
@@ -130,6 +136,7 @@ db.createCollection("organization", {
 
 db.organization.createIndex({ organization_id: 1 }, { unique: true });   // PRIMARY KEY
 db.organization.createIndex({ name: 1 }, { unique: true });              // UNIQUE
+/*
 
 
 -------------------------------------------------------------------DEPARTMENT
@@ -154,6 +161,7 @@ FOREIGN KEY (organization_id) REFERENCES z_conf.organization (organization_id);
 ---- Con validaciones:
 
 
+*/
 db.createCollection("department", {
    validator: {
       $jsonSchema: {
@@ -187,6 +195,7 @@ db.createCollection("department", {
 
 db.department.createIndex({ department_id: 1 }, { unique: true });                  // PRIMARY KEY
 db.department.createIndex({ organization_id: 1, name: 1 }, { unique: true });        // UNIQUE (organization_id, name)
+/*
 
 
 ----------------------------------------------------------------------CLIENT
@@ -207,6 +216,7 @@ CREATE TABLE z_conf.client (
 ---- Con validaciones:
 
 
+*/
 db.createCollection("client", {
    validator: {
       $jsonSchema: {
@@ -272,6 +282,7 @@ db.client.createIndex(
    { phone: 1 },
    { unique: true, partialFilterExpression: { phone: { $type: "string" } } }
 );
+/*
 
 
 ------------------------------------------------------------------MEASUREMENT
@@ -295,6 +306,7 @@ CREATE TABLE z_conf.measurement (
 ---- Con validaciones:
 
 
+*/
 db.createCollection("measurement", {
    validator: {
       $jsonSchema: {
@@ -370,6 +382,7 @@ db.createCollection("measurement", {
 });
 
 db.measurement.createIndex({ measurement_id: 1 }, { unique: true });   // PRIMARY KEY
+/*
 
 
 ----------------------------------------------------------------GARMENT_ORDER
@@ -398,6 +411,7 @@ CREATE TABLE z_conf.garment_order (
 ---- Con validaciones:
 
 
+*/
 db.createCollection("garment_order", {
    validator: {
       $and: [
@@ -487,6 +501,7 @@ db.createCollection("garment_order", {
 });
 
 db.garment_order.createIndex({ garment_order_id: 1 }, { unique: true });   // PRIMARY KEY
+/*
 
 
 Nota: la restricción chk_delivery_date_not_past (la fecha de entrega no puede estar en el pasado,
@@ -507,6 +522,7 @@ CREATE TABLE z_conf.payment (
 ---- Con validaciones:
 
 
+*/
 db.createCollection("payment", {
    validator: {
       $jsonSchema: {
@@ -543,6 +559,7 @@ db.createCollection("payment", {
 });
 
 db.payment.createIndex({ payment_id: 1 }, { unique: true });   // PRIMARY KEY
+/*
 
 --> Nota: si tu versión de MongoDB no acepta exclusiveMinimum dentro de $jsonSchema,
 --  quita esa línea y usa en su lugar:  minimum: 0.01
@@ -561,6 +578,7 @@ CREATE TABLE z_conf.profile (
 ---- Con validaciones:
 
 
+*/
 db.createCollection("profile", {
    validator: {
       $jsonSchema: {
@@ -600,6 +618,7 @@ db.createCollection("profile", {
 });
 
 db.profile.createIndex({ user_id: 1 }, { unique: true });   // PRIMARY KEY
+/*
 
 
 ---------------------------------------------------------------------AUDIT_LOG
@@ -621,6 +640,7 @@ CREATE TABLE z_conf.audit_log (
 ---- Con validaciones:
 
 
+*/
 db.createCollection("audit_log", {
    validator: {
       $jsonSchema: {
@@ -673,6 +693,7 @@ db.createCollection("audit_log", {
 });
 
 db.audit_log.createIndex({ audit_log_id: 1 }, { unique: true });   // PRIMARY KEY
+/*
 
 
 ---------------------------------------------------------------------------
@@ -1125,3 +1146,4 @@ cada vez que se ejecuta el reporte.
 Lógica condicional ($switch): arma un semáforo de entrega directamente en la base de datos.
 
 Seguridad de datos ($ifNull): reemplaza valores nulos por mensajes listos para el usuario final.
+*/
