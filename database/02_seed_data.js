@@ -109,3 +109,29 @@ db.payment.insertMany(pedidos.map((p, i) => ({
   paid_at: ahora,
   garment_order_id: NumberInt(i + 1)
 })));
+
+// USUARIOS INICIALES: Admin (admin@zetaconfecciones.com / Admin1234!) y Employee (empleado@zetaconfecciones.com / Empleado1234!)
+db.profile.insertMany([
+  {
+    user_id: "ba9397f7-3cb4-4a4a-9f7b-eb48467041fb",
+    email: "admin@zetaconfecciones.com",
+    password_hash: "$2b$12$sQm.1KzYUrIYKuUZaFJNgu9zAyhrNbdNsK03.TLW4KtXmknPzVimi",
+    must_change_password: false,
+    full_name: "Administrador Zeta",
+    active: true,
+    created_at: ahora,
+    role_id: NumberInt(1),
+    avatar_path: null
+  },
+  {
+    user_id: "40d0baff-3ead-4dda-bad4-afd5d6e80355",
+    email: "empleado@zetaconfecciones.com",
+    password_hash: "$2b$12$2Mk3RQ1m9xfZ1IiGWms4dO4qah76D9Ow4JHZt7svOosm9BYQPWQxG",
+    must_change_password: false,
+    full_name: "Empleado Zeta",
+    active: true,
+    created_at: ahora,
+    role_id: NumberInt(2),
+    avatar_path: null
+  }
+]);

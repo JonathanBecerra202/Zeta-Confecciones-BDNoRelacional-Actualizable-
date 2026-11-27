@@ -39,15 +39,9 @@ Ejecuta `02_seed_data.js`:
 load("database/02_seed_data.js")
 ```
 
-### Paso 4: Recrear contadores y usuario Admin inicial
+### Paso 4: Recrear contadores
 1. Reinicia el servicio del backend (en Render con **Manual Deploy** o en local con `uvicorn`): al arrancar, `ensure_profile_schema_and_indexes` crea automáticamente la colección `counters` sincronizada con los IDs existentes (`1..10`) y el índice único parcial de `profile.email`.
-2. Desde `backend/` (con tu `.env` apuntando a Atlas), crea de nuevo el usuario administrador inicial:
-
-```powershell
-cd backend
-.\venv\Scripts\python.exe seed_admin.py
-```
-
-Credenciales creadas por defecto:
-- **Correo:** `admin@zetaconfecciones.com`
-- **Contraseña:** `Admin1234!`
+2. Los usuarios iniciales ya quedan sembrados automáticamente por `02_seed_data.js`:
+   - **Admin:** `admin@zetaconfecciones.com` / `Admin1234!`
+   - **Empleado:** `empleado@zetaconfecciones.com` / `Empleado1234!`
+   *(Opcional: si necesitas crear otro Admin distinto, puedes usar `.\venv\Scripts\python.exe seed_admin.py --email ... --password ...`).*

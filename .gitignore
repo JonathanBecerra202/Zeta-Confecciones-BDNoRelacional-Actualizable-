@@ -1,4 +1,7 @@
 @"
+# Entregables locales
+para entrega/
+
 # Python / Backend
 venv/
 __pycache__/
