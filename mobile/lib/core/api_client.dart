@@ -18,12 +18,19 @@ class ApiException implements Exception {
 }
 
 class ApiClient {
-  ApiClient._();
+  ApiClient._({http.Client? client, String? baseUrl})
+      : _http = client ?? http.Client(),
+        baseUrl = (baseUrl ?? Env.apiBaseUrl).replaceAll(RegExp(r'/+$'), '');
+
   static final ApiClient instance = ApiClient._();
 
+  /// Crea un cliente con `http.Client` y URL propios (para pruebas).
+  factory ApiClient.forTesting({required http.Client client, String baseUrl = 'http://test'}) =>
+      ApiClient._(client: client, baseUrl: baseUrl);
+
   static const _tokenKey = 'zeta_access_token';
-  final String baseUrl = Env.apiBaseUrl.replaceAll(RegExp(r'/+$'), '');
-  final http.Client _http = http.Client();
+  final String baseUrl;
+  final http.Client _http;
 
   String? _token;
   final _authController = StreamController<String?>.broadcast();
