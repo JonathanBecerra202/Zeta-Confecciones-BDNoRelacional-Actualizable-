@@ -6,7 +6,8 @@ Guía para limpiar la base de datos en MongoDB Atlas y volver a crear las colecc
 
 1. [`00_reset_database.js`](./00_reset_database.js): elimina todas las colecciones existentes (`drop()`).
 2. [`01_schema_and_indexes.js`](./01_schema_and_indexes.js): crea las 9 colecciones con sus validaciones `$jsonSchema` (`validationLevel: "strict"`) y sus índices únicos.
-3. [`02_seed_data.js`](./02_seed_data.js): inserta los datos iniciales (`role`, `organization`, `department`, `client`, `measurement`, `garment_order` y `payment`).
+3. [`02_seed_data.js`](./02_seed_data.js): inserta los datos iniciales (`role`, `organization`, `department`, `client`, `measurement`, `garment_order`, `payment` y usuarios iniciales en `profile`).
+4. [`03_queries_and_validation_tests.js`](./03_queries_and_validation_tests.js): archivo de referencia con ejemplos de `collMod`, pruebas de validación que deben fallar y consultas de agregación con `$lookup`.
 
 ---
 
